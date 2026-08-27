@@ -1,0 +1,9 @@
+## Interface: 120100
+## Title: ResourceDing
+## Notes: Plays a sound when a class finisher resource reaches maximum.
+## Author: Ironship
+## Version: 1.0.0
+## SavedVariables: ResourceDingDB
+
+Core.lua
+Settings.lua
