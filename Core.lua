@@ -31,6 +31,7 @@ local defaults = {
   combatOnly = true,
   sound = "auction",
 }
+Addon.defaults = defaults
 
 local function initializeDatabase()
   if type(ResourceDingDB) ~= "table" then ResourceDingDB = {} end
@@ -73,6 +74,11 @@ function Addon.CheckPower(silent)
   Addon.wasFull = isFull
 end
 
+function Addon.RestoreDefaults()
+  for key, value in pairs(defaults) do Addon.db[key] = value end
+  Addon.ResetPowerState()
+end
+
 function Addon.ResetPowerState()
   Addon.CheckPower(true)
   if Addon.settingsPanel and Addon.settingsPanel.refresh then Addon.settingsPanel.refresh() end
@@ -110,9 +116,11 @@ SlashCmdList.RESOURCEDING = function(message)
     Addon.PlaySelectedSound()
   elseif command == "on" then
     Addon.db.enabled = true
+    Addon.ResetPowerState()
     print("|cff66ccffResourceDing:|r enabled")
   elseif command == "off" then
     Addon.db.enabled = false
+    Addon.ResetPowerState()
     print("|cff66ccffResourceDing:|r disabled")
   elseif Addon.OpenSettings then
     Addon.OpenSettings()

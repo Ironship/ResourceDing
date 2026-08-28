@@ -3,11 +3,64 @@ local Addon = ResourceDing
 local function checkbox(parent, name, label, y, getter, setter)
   local control = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
   control:SetPoint("TOPLEFT", 16, y)
-  local text = _G[name .. "Text"]
+  local text = control.Text or control.text or _G[name .. "Text"]
   if text then text:SetText(label) end
   control:SetChecked(getter())
   control:SetScript("OnClick", function(self) setter(self:GetChecked()) end)
   return control
+end
+
+local function soundEntries()
+  local entries = {}
+  for _, key in ipairs(Addon.SOUND_ORDER) do
+    entries[#entries + 1] = { key = key, name = Addon.SOUNDS[key].name }
+  end
+  return entries
+end
+
+local function selectSound(key)
+  Addon.db.sound = key
+  Addon.PlaySelectedSound()
+end
+
+local function createDropdown(parent)
+  local modern = select(2, pcall(CreateFrame, "DropdownButton", "ResourceDingSoundDropdown", parent,
+    "WowStyle1DropdownTemplate"))
+  if type(modern) == "table" and modern.SetupMenu then
+    modern:SetWidth(230)
+    modern:SetupMenu(function(_, rootDescription)
+      for _, entry in ipairs(soundEntries()) do
+        rootDescription:CreateRadio(entry.name,
+          function() return Addon.db.sound == entry.key end,
+          function() selectSound(entry.key) end)
+      end
+    end)
+    return modern, function()
+      local sound = Addon.SOUNDS[Addon.db.sound] or Addon.SOUNDS.auction
+      if modern.SetText then modern:SetText(sound.name) end
+      if modern.GenerateMenu then modern:GenerateMenu() end
+    end
+  end
+
+  local legacy = CreateFrame("Frame", "ResourceDingSoundDropdownLegacy", parent, "UIDropDownMenuTemplate")
+  UIDropDownMenu_SetWidth(legacy, 220)
+  UIDropDownMenu_Initialize(legacy, function(_, level)
+    for _, entry in ipairs(soundEntries()) do
+      local info = UIDropDownMenu_CreateInfo()
+      info.text = entry.name
+      info.value = entry.key
+      info.checked = Addon.db.sound == entry.key
+      info.func = function()
+        selectSound(entry.key)
+        UIDropDownMenu_SetText(legacy, Addon.SOUNDS[entry.key].name)
+      end
+      UIDropDownMenu_AddButton(info, level or 1)
+    end
+  end)
+  return legacy, function()
+    local sound = Addon.SOUNDS[Addon.db.sound] or Addon.SOUNDS.auction
+    UIDropDownMenu_SetText(legacy, sound.name)
+  end
 end
 
 function Addon.CreateSettingsPanel()
@@ -43,31 +96,9 @@ function Addon.CreateSettingsPanel()
   soundLabel:SetPoint("TOPLEFT", 16, -178)
   soundLabel:SetText("Sound")
 
-  local dropdown = CreateFrame("Frame", "ResourceDingSoundDropdown", panel, "UIDropDownMenuTemplate")
+  local dropdown, updateSoundText = createDropdown(panel)
   dropdown:SetPoint("TOPLEFT", 8, -196)
-  UIDropDownMenu_SetWidth(dropdown, 220)
   panel.dropdown = dropdown
-
-  local function updateSoundText()
-    local sound = Addon.SOUNDS[Addon.db.sound] or Addon.SOUNDS.auction
-    UIDropDownMenu_SetText(dropdown, sound.name)
-  end
-
-  UIDropDownMenu_Initialize(dropdown, function(_, level)
-    for _, key in ipairs(Addon.SOUND_ORDER) do
-      local sound = Addon.SOUNDS[key]
-      local info = UIDropDownMenu_CreateInfo()
-      info.text = sound.name
-      info.value = key
-      info.checked = Addon.db.sound == key
-      info.func = function()
-        Addon.db.sound = key
-        updateSoundText()
-        Addon.PlaySelectedSound()
-      end
-      UIDropDownMenu_AddButton(info, level or 1)
-    end
-  end)
   updateSoundText()
 
   local test = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
@@ -84,6 +115,7 @@ function Addon.CreateSettingsPanel()
   supported:SetText("Supported: Rogue and Feral Druid Combo Points, Monk Chi, Paladin Holy Power, Warlock Soul Shards, Arcane Mage Charges, and Evoker Essence. Unsupported specs stay silent.")
 
   panel.refresh = function()
+    if not Addon.db then return end
     local resource, current, maximum = Addon.GetResourceState()
     if resource and maximum > 0 then
       resourceText:SetText(string.format("Detected: %s (%d / %d)", resource.name, current, maximum))
@@ -94,25 +126,25 @@ function Addon.CreateSettingsPanel()
     end
     panel.enabled:SetChecked(Addon.db.enabled)
     panel.combatOnly:SetChecked(Addon.db.combatOnly)
-    UIDropDownMenu_Initialize(dropdown, function(_, level)
-      for _, key in ipairs(Addon.SOUND_ORDER) do
-        local sound = Addon.SOUNDS[key]
-        local info = UIDropDownMenu_CreateInfo()
-        info.text = sound.name
-        info.value = key
-        info.checked = Addon.db.sound == key
-        info.func = function() Addon.db.sound = key; updateSoundText(); Addon.PlaySelectedSound() end
-        UIDropDownMenu_AddButton(info, level or 1)
-      end
-    end)
     updateSoundText()
   end
 
+  -- The settings framework drives a canvas panel through these; without OnRefresh
+  -- the panel keeps whatever it showed when it was built, so the detected resource
+  -- and the checkboxes go stale as soon as the player changes spec.
+  panel.OnRefresh = panel.refresh
+  panel.OnCommit = function() end
+  panel.OnDefault = function()
+    if Addon.RestoreDefaults then Addon.RestoreDefaults() end
+    panel.refresh()
+  end
+  panel:SetScript("OnShow", panel.refresh)
+
   if Settings and Settings.RegisterCanvasLayoutCategory then
     local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
-    category.ID = panel.name
     Settings.RegisterAddOnCategory(category)
     Addon.settingsCategory = category
+    Addon.settingsCategoryID = category.GetID and category:GetID() or category.ID
   elseif InterfaceOptions_AddCategory then
     InterfaceOptions_AddCategory(panel)
   end
@@ -122,9 +154,8 @@ end
 function Addon.OpenSettings()
   if not Addon.settingsPanel then Addon.CreateSettingsPanel() end
   Addon.settingsPanel.refresh()
-  if Settings and Settings.OpenToCategory and Addon.settingsCategory then
-    local id = Addon.settingsCategory.GetID and Addon.settingsCategory:GetID() or Addon.settingsCategory.ID
-    if id then Settings.OpenToCategory(id) end
+  if Settings and Settings.OpenToCategory and Addon.settingsCategoryID then
+    Settings.OpenToCategory(Addon.settingsCategoryID)
   elseif InterfaceOptionsFrame_OpenToCategory then
     InterfaceOptionsFrame_OpenToCategory(Addon.settingsPanel)
     InterfaceOptionsFrame_OpenToCategory(Addon.settingsPanel)
