@@ -24,6 +24,10 @@ Open **Esc → Options → AddOns → ResourceDing** or type `/rding`.
 - Auction House, Ready Check, Quest Complete, Level Up, Bell, Coins, and Raid Warning sounds
 - Test sound button
 
+The panel follows the game: it shows the resource your current spec actually
+uses and updates when you change spec or form. **Defaults** restores the saved
+settings.
+
 `/rding test`, `/rding on`, `/rding off` are also available.
 
 Retail 12.1 (`Interface 120100`). All rights reserved.
