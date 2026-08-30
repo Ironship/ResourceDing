@@ -5,15 +5,35 @@ local function powerType(name, fallback)
   return Enum and Enum.PowerType and Enum.PowerType[name] or fallback
 end
 
+-- Retail, Classic Era and Season of Discovery run the same addon. What differs
+-- is which of these resources the game actually has.
+local function isClassic()
+  if type(WOW_PROJECT_ID) ~= "number" or type(WOW_PROJECT_MAINLINE) ~= "number" then
+    return false
+  end
+  return WOW_PROJECT_ID ~= WOW_PROJECT_MAINLINE
+end
+Addon.IsClassic = isClassic
+
 Addon.RESOURCES = {
-  ROGUE = { name = "Combo Points", power = powerType("ComboPoints", 4) },
-  DRUID = { name = "Combo Points", power = powerType("ComboPoints", 4) },
+  ROGUE = { name = "Combo Points", power = powerType("ComboPoints", 4), comboPoints = true },
+  DRUID = { name = "Combo Points", power = powerType("ComboPoints", 4), comboPoints = true },
   MONK = { name = "Chi", power = powerType("Chi", 12) },
   PALADIN = { name = "Holy Power", power = powerType("HolyPower", 9) },
   WARLOCK = { name = "Soul Shards", power = powerType("SoulShards", 7) },
   MAGE = { name = "Arcane Charges", power = powerType("ArcaneCharges", 16) },
   EVOKER = { name = "Essence", power = powerType("Essence", 19) },
 }
+
+-- Vanilla has combo points and nothing else. Chi, Holy Power, Arcane Charges
+-- and the Soul Shard bar were all added by later expansions, and Monk and
+-- Evoker do not exist there at all. Leaving them listed would have the settings
+-- panel announce a resource the player's class cannot have in that game.
+if isClassic() then
+  for class in pairs(Addon.RESOURCES) do
+    if class ~= "ROGUE" and class ~= "DRUID" then Addon.RESOURCES[class] = nil end
+  end
+end
 
 Addon.SOUNDS = {
   auction = { name = "Auction House", id = SOUNDKIT and SOUNDKIT.AUCTION_WINDOW_OPEN or 5274 },
@@ -25,6 +45,24 @@ Addon.SOUNDS = {
   warning = { name = "Raid Warning", id = SOUNDKIT and SOUNDKIT.RAID_WARNING or 8959 },
 }
 Addon.SOUND_ORDER = { "auction", "ready", "quest", "level", "bell", "coins", "warning" }
+
+-- A sound added in a later expansion does not exist on the Classic client, and
+-- PlaySound on an id it does not know fails quietly. Offering it would give the
+-- player a choice that appears to do nothing, so a sound this client cannot
+-- name is dropped from the list instead of shipped broken. The numeric
+-- fallbacks above are only for a client with no SOUNDKIT table at all.
+if SOUNDKIT then
+  local KEYS = {
+    auction = "AUCTION_WINDOW_OPEN", ready = "READY_CHECK", quest = "UI_QUEST_COMPLETE",
+    level = "LEVEL_UP", bell = "UI_ORDERHALL_TALENT_READY_TOAST",
+    coins = "LOOT_MONEY_COINS", warning = "RAID_WARNING",
+  }
+  local kept = {}
+  for _, key in ipairs(Addon.SOUND_ORDER) do
+    if SOUNDKIT[KEYS[key]] then kept[#kept + 1] = key else Addon.SOUNDS[key] = nil end
+  end
+  if #kept > 0 then Addon.SOUND_ORDER = kept end
+end
 
 local defaults = {
   enabled = true,
@@ -50,7 +88,17 @@ end
 function Addon.GetResourceState()
   local resource = Addon.GetResource()
   if not resource then return nil, 0, 0 end
-  return resource, UnitPower("player", resource.power) or 0, UnitPowerMax("player", resource.power) or 0
+  local current = UnitPower("player", resource.power) or 0
+  local maximum = UnitPowerMax("player", resource.power) or 0
+  -- On the Classic client a rogue's or a cat druid's combo points belong to the
+  -- target rather than to the player, and UnitPower reports none of them.
+  -- GetComboPoints is the call that answers there. Retail is left alone: this
+  -- is only reached when UnitPower has already said there is no such bar.
+  if maximum <= 0 and resource.comboPoints and type(GetComboPoints) == "function" then
+    current = GetComboPoints("player", "target") or 0
+    maximum = MAX_COMBO_POINTS or 5
+  end
+  return resource, current, maximum
 end
 
 function Addon.PlaySelectedSound()
@@ -85,14 +133,27 @@ function Addon.ResetPowerState()
 end
 
 local events = CreateFrame("Frame")
-events:RegisterEvent("ADDON_LOADED")
-events:RegisterEvent("PLAYER_ENTERING_WORLD")
-events:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
-events:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
-events:RegisterEvent("PLAYER_TARGET_CHANGED")
-events:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
-events:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-events:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+
+-- Registering an event the client does not have raises an error, and this runs
+-- at load, before the addon has done anything -- so one absent name would take
+-- the whole thing down rather than cost it a feature. PLAYER_SPECIALIZATION_CHANGED
+-- is exactly that on Classic Era, which has no specialisations at all.
+local function listenFor(event, unit)
+  local method = unit and events.RegisterUnitEvent or events.RegisterEvent
+  return (pcall(method, events, event, unit))
+end
+
+listenFor("ADDON_LOADED")
+listenFor("PLAYER_ENTERING_WORLD")
+listenFor("PLAYER_SPECIALIZATION_CHANGED")
+listenFor("UPDATE_SHAPESHIFT_FORM")
+listenFor("PLAYER_TARGET_CHANGED")
+listenFor("UNIT_POWER_UPDATE", "player")
+listenFor("UNIT_POWER_FREQUENT", "player")
+listenFor("UNIT_MAXPOWER", "player")
+-- Classic's combo points change without any UNIT_POWER event, because they are
+-- not the player's power there. This is what fires instead.
+listenFor("UNIT_COMBO_POINTS", "player")
 events:SetScript("OnEvent", function(_, event, arg1)
   if event == "ADDON_LOADED" then
     if arg1 ~= addonName then return end
