@@ -117,6 +117,18 @@ function Addon.CheckPower(silent)
   if not silent and isFull and not Addon.wasFull and Addon.db.enabled then
     if not Addon.db.combatOnly or UnitAffectingCombat("player") then
       Addon.PlaySelectedSound()
+    else
+      -- Full, but out of combat and the player asked for combat only. The sound
+      -- is skipped -- and the state is deliberately left unlatched, so the ding
+      -- still happens the moment combat starts.
+      --
+      -- Latching here is what made a rogue's opener silent. Ambush and Cheap
+      -- Shot award their combo points in the same instant the fight begins, and
+      -- UnitAffectingCombat is routinely still false when the event arrives. The
+      -- addon saw a full bar, said nothing because combat had not registered
+      -- yet, and recorded the bar as already announced. The fight then started
+      -- with the points already there and no further rise to announce.
+      return
     end
   end
   Addon.wasFull = isFull
@@ -148,6 +160,9 @@ listenFor("PLAYER_ENTERING_WORLD")
 listenFor("PLAYER_SPECIALIZATION_CHANGED")
 listenFor("UPDATE_SHAPESHIFT_FORM")
 listenFor("PLAYER_TARGET_CHANGED")
+-- Entering combat is itself worth a check: the resource may have filled a
+-- moment earlier, while the sound was still being held back.
+listenFor("PLAYER_REGEN_DISABLED")
 listenFor("UNIT_POWER_UPDATE", "player")
 listenFor("UNIT_POWER_FREQUENT", "player")
 listenFor("UNIT_MAXPOWER", "player")

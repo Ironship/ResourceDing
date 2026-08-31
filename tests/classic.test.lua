@@ -33,7 +33,7 @@ local function stubClient(opts)
   local known = {
     ADDON_LOADED = true, PLAYER_ENTERING_WORLD = true, UPDATE_SHAPESHIFT_FORM = true,
     PLAYER_TARGET_CHANGED = true, UNIT_POWER_UPDATE = true, UNIT_POWER_FREQUENT = true,
-    UNIT_MAXPOWER = true,
+    UNIT_MAXPOWER = true, PLAYER_REGEN_DISABLED = true,
   }
   if opts.classic then
     known.UNIT_COMBO_POINTS = true
