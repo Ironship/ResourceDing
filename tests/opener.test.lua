@@ -107,4 +107,16 @@ combat = true
 frame.fn(nil, "PLAYER_REGEN_DISABLED")
 assert(#played == 0, "disabled means silent, in combat as well as out of it")
 
+-- A Retail druid out of cat form has no combo bar: UnitPowerMax reports zero.
+-- The Classic fallback reads combo points off the *target*, and letting a Retail
+-- client reach it reported a bar that spec does not have -- and called an API the
+-- repo's own test says Retail must never call.
+addon, frame = client{ combat = true, points = 0 }
+UnitPowerMax = function() return 0 end
+local ok, err = pcall(function() return addon.GetResourceState() end)
+assert(ok, "a Retail druid with no combo bar must not reach the Classic path: " .. tostring(err))
+local _, current, maximum = addon.GetResourceState()
+assert(maximum == 0,
+  "with no bar the maximum stays zero rather than being forced to five, got " .. tostring(maximum))
+
 print("opener: ok")

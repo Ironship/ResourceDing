@@ -94,7 +94,11 @@ function Addon.GetResourceState()
   -- target rather than to the player, and UnitPower reports none of them.
   -- GetComboPoints is the call that answers there. Retail is left alone: this
   -- is only reached when UnitPower has already said there is no such bar.
-  if maximum <= 0 and resource.comboPoints and type(GetComboPoints) == "function" then
+  -- Only on the client where combo points belong to the target. A Retail druid
+  -- out of cat form reports a maximum of zero too, and this branch then read
+  -- combo points off the target and reported a bar that spec does not have.
+  if maximum <= 0 and resource.comboPoints and isClassic()
+      and type(GetComboPoints) == "function" then
     current = GetComboPoints("player", "target") or 0
     maximum = MAX_COMBO_POINTS or 5
   end
@@ -102,7 +106,14 @@ function Addon.GetResourceState()
 end
 
 function Addon.PlaySelectedSound()
-  local choice = Addon.SOUNDS[Addon.db and Addon.db.sound or defaults.sound] or Addon.SOUNDS.auction
+  -- Falls through to whatever sound this client does have. The filter above
+  -- drops any SOUNDKIT entry the client is missing, and the default is not
+  -- exempt from that -- without a floor, a client without the auction sound
+  -- would error on every full bar instead of playing something else.
+  local choice = Addon.SOUNDS[Addon.db and Addon.db.sound or defaults.sound]
+    or Addon.SOUNDS.auction
+    or select(2, next(Addon.SOUNDS))
+  if not choice or not choice.id then return false end
   return PlaySound(choice.id, "Master", true)
 end
 

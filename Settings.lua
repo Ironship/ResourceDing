@@ -112,7 +112,20 @@ function Addon.CreateSettingsPanel()
   supported:SetPoint("TOPRIGHT", -16, -252)
   supported:SetJustifyH("LEFT")
   supported:SetWordWrap(true)
-  supported:SetText("Supported: Rogue and Feral Druid Combo Points, Monk Chi, Paladin Holy Power, Warlock Soul Shards, Arcane Mage Charges, and Evoker Essence. Unsupported specs stay silent.")
+  -- Built from the table the addon actually uses, which Core prunes on Classic
+  -- to the two classes that game has. Spelling the full Retail list out here
+  -- defeated that pruning: Classic players were told about Chi, Holy Power,
+  -- Soul Shards, Arcane Charges and Essence, none of which exist for them.
+  local names, seen = {}, {}
+  for _, resource in pairs(Addon.RESOURCES) do
+    if not seen[resource.name] then
+      seen[resource.name] = true
+      names[#names + 1] = resource.name
+    end
+  end
+  table.sort(names)
+  supported:SetText("Supported: " .. table.concat(names, ", ")
+    .. ". Classes without one of these stay silent.")
 
   panel.refresh = function()
     if not Addon.db then return end
