@@ -1,9 +1,9 @@
-## Interface: 11507
+## Interface: 11509
 ## Title: ResourceDing
 ## Notes: Plays a sound when a class finisher resource reaches maximum.
 ## IconTexture: Interface\AddOns\ResourceDing\icon
 ## Author: Ironship
-## Version: 1.2.2
+## Version: 1.2.3
 ## SavedVariables: ResourceDingDB
 
 Core.lua
