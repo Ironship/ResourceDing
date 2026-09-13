@@ -10,13 +10,18 @@ It is useful when you are watching the fight instead of the resource bar: build 
 ## Supported resources
 
 - Rogue and Feral Druid — Combo Points
-- Monk — Chi
-- Paladin — Holy Power
-- Warlock — Soul Shards
-- Arcane Mage — Arcane Charges
-- Evoker — Essence
+- Monk — Chi *(Retail)*
+- Paladin — Holy Power *(Retail)*
+- Warlock — Soul Shards *(Retail)*
+- Arcane Mage — Arcane Charges *(Retail)*
+- Evoker — Essence *(Retail)*
 
 Unsupported specs remain silent automatically.
+
+On Classic Era only combo points exist. Chi, Holy Power, Arcane Charges and the
+Soul Shard bar all arrived with later expansions, and Monk and Evoker are not in
+that game at all, so `Core.lua` drops every entry but Rogue and Druid when it
+loads there — the settings never offer a resource the client cannot have.
 
 ## Settings
 
@@ -33,4 +38,5 @@ settings.
 
 `/rding test`, `/rding on`, `/rding off` are also available.
 
-Retail 12.1 (`Interface 120100`). All rights reserved.
+Retail 12.1 (`Interface 120100`) and Classic Era 1.15.9 (`11509`) — one manifest
+each. All rights reserved.
