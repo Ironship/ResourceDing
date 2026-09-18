@@ -5,9 +5,32 @@ local function powerType(name, fallback)
   return Enum and Enum.PowerType and Enum.PowerType[name] or fallback
 end
 
--- Retail, Classic Era and Season of Discovery run the same addon. What differs
--- is which of these resources the game actually has.
+-- Retail, Classic Era, Season of Discovery and WoW Forever run the same addon.
+-- What differs is which of these resources the game actually has.
+--
+-- Forever is the awkward one. It is a Classic Era game -- vanilla content, the
+-- Classic Era API, combo points on the target -- built on the Retail client,
+-- and that client answers WOW_PROJECT_ID the way Retail does. Asked the usual
+-- way, the addon would think it was on Retail, offer Chi and Holy Power to
+-- classes that do not exist there, and register a specialisation event the
+-- game may not have, which is an error at load. The one thing that says where
+-- the addon actually is comes from the client's own choice of manifest: it
+-- loads ResourceDing_Camelot.toc there, and that manifest says 16001.
+local FOREVER_INTERFACE = 16001
+
+local function manifestInterface()
+  local get = (type(C_AddOns) == "table" and C_AddOns.GetAddOnMetadata)
+    or GetAddOnMetadata
+  if type(get) ~= "function" then return nil end
+  -- Probed: on a client without the call, or with a manifest it cannot read,
+  -- the answer has to be "not Forever" rather than an error at load time.
+  local ok, value = pcall(get, addonName or "ResourceDing", "Interface")
+  if not ok then return nil end
+  return tonumber(value)
+end
+
 local function isClassic()
+  if manifestInterface() == FOREVER_INTERFACE then return true end
   if type(WOW_PROJECT_ID) ~= "number" or type(WOW_PROJECT_MAINLINE) ~= "number" then
     return false
   end

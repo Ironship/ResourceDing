@@ -1,8 +1,9 @@
 -- Run from the addon root:  lua tests/classic.test.lua
 --
 -- Written without a Classic client to try it on, so this stands in for one. It
--- loads Core.lua twice: once against a fake Retail API and once against a fake
--- Classic Era one, and checks the three places the two games disagree.
+-- loads Core.lua against a fake Retail API, a fake Classic Era one, and a fake
+-- WoW Forever one -- Classic Era's API on a client that calls itself Retail --
+-- and checks the places the games disagree.
 --
 -- The first is the one that matters most. Registering an event the client does
 -- not have raises an error, and that happens while the addon is loading -- so a
@@ -15,12 +16,22 @@ local registered, played
 local function stubClient(opts)
   registered, played = {}, {}
   for _, name in ipairs({ "Enum", "SOUNDKIT", "GetComboPoints", "MAX_COMBO_POINTS",
-                          "WOW_PROJECT_ID", "WOW_PROJECT_MAINLINE", "ResourceDingDB" }) do
+                          "WOW_PROJECT_ID", "WOW_PROJECT_MAINLINE", "ResourceDingDB",
+                          "C_AddOns", "GetAddOnMetadata" }) do
     _G[name] = nil
   end
 
+  -- Forever: the API is Classic Era's, the project id is Retail's, and the
+  -- manifest the client loaded is the Camelot one. Everything below that
+  -- models the game's API follows classicApi; the id alone follows opts.classic.
+  local classicApi = opts.classic or opts.forever
   WOW_PROJECT_MAINLINE = 1
   WOW_PROJECT_ID = opts.classic and 2 or 1
+  C_AddOns = { GetAddOnMetadata = function(_, field)
+    if field ~= "Interface" then return nil end
+    if opts.forever then return "16001" end
+    return opts.classic and "11509" or "120100"
+  end }
 
   Enum = { PowerType = { ComboPoints = 4, Chi = 12, HolyPower = 9,
                          SoulShards = 7, ArcaneCharges = 16, Essence = 19 } }
@@ -28,14 +39,14 @@ local function stubClient(opts)
   SOUNDKIT = { AUCTION_WINDOW_OPEN = 5274, READY_CHECK = 8960, UI_QUEST_COMPLETE = 878,
                LEVEL_UP = 888, LOOT_MONEY_COINS = 120, RAID_WARNING = 8959 }
   -- A Legion sound. The Classic client has never heard of it.
-  if not opts.classic then SOUNDKIT.UI_ORDERHALL_TALENT_READY_TOAST = 73743 end
+  if not classicApi then SOUNDKIT.UI_ORDERHALL_TALENT_READY_TOAST = 73743 end
 
   local known = {
     ADDON_LOADED = true, PLAYER_ENTERING_WORLD = true, UPDATE_SHAPESHIFT_FORM = true,
     PLAYER_TARGET_CHANGED = true, UNIT_POWER_UPDATE = true, UNIT_POWER_FREQUENT = true,
     UNIT_MAXPOWER = true, PLAYER_REGEN_DISABLED = true,
   }
-  if opts.classic then
+  if classicApi then
     known.UNIT_COMBO_POINTS = true
   else
     known.PLAYER_SPECIALIZATION_CHANGED = true
@@ -61,7 +72,7 @@ local function stubClient(opts)
   PlaySound = function(id) played[#played + 1] = id; return true end
   UnitPower = function() return opts.power or 0 end
   UnitPowerMax = function() return opts.maxPower or 0 end
-  if opts.classic then
+  if classicApi then
     MAX_COMBO_POINTS = 5
     comboNow = opts.combo or 0
     GetComboPoints = function() return comboNow end
@@ -123,9 +134,28 @@ comboNow = 5
 addon.CheckPower(false)
 assert(#played == 2, "spending and refilling is a fresh transition")
 
+-- WoW Forever ----------------------------------------------------------------
+-- The project id says Retail. The manifest says 16001. The manifest wins, or
+-- the addon registers an event this game does not have and dies at load.
+
+addon = stubClient{ forever = true, maxPower = 0, combo = 0 }
+assert(addon.IsClassic() == true, "Forever must count as Classic, whatever WOW_PROJECT_ID says")
+assert(not registered.PLAYER_SPECIALIZATION_CHANGED,
+  "Forever has no specialisations; registering that event is an error at load")
+assert(registered.UNIT_COMBO_POINTS, "Forever's combo points change like Classic's")
+for _, class in ipairs({ "MONK", "PALADIN", "WARLOCK", "MAGE", "EVOKER" }) do
+  assert(addon.RESOURCES[class] == nil, class .. " does not exist on Forever")
+end
+assert(addon.SOUNDS.bell == nil, "and the Legion sound is not offered there")
+addon = stubClient{ forever = true, maxPower = 0, combo = 5 }
+local fResource, fCurrent, fMaximum = addon.GetResourceState()
+assert(fResource and fCurrent == 5 and fMaximum == 5,
+  "Forever reads combo points off the target, got " .. tostring(fCurrent) .. "/" .. tostring(fMaximum))
+
 -- Retail ---------------------------------------------------------------------
 
 addon = stubClient{ classic = false, power = 5, maxPower = 5 }
+assert(addon.IsClassic() == false, "a Retail manifest (120100) is not Forever")
 assert(registered.PLAYER_SPECIALIZATION_CHANGED, "Retail still watches spec changes")
 for _, class in ipairs({ "ROGUE", "DRUID", "MONK", "PALADIN", "WARLOCK", "MAGE", "EVOKER" }) do
   assert(addon.RESOURCES[class], class .. " must keep its resource on Retail")

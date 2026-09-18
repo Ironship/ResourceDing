@@ -23,6 +23,11 @@ Soul Shard bar all arrived with later expansions, and Monk and Evoker are not in
 that game at all, so `Core.lua` drops every entry but Rogue and Druid when it
 loads there — the settings never offer a resource the client cannot have.
 
+WoW Forever is that same game on the Retail client, which reports itself as
+Retail. The addon goes by the manifest the client loaded instead
+(`ResourceDing_Camelot.toc`, `Interface 16001`) and behaves as it does on
+Classic Era.
+
 ## Settings
 
 Open **Esc → Options → AddOns → ResourceDing** or type `/rding`.
@@ -38,5 +43,5 @@ settings.
 
 `/rding test`, `/rding on`, `/rding off` are also available.
 
-Retail 12.1 (`Interface 120100`) and Classic Era 1.15.9 (`11509`) — one manifest
-each. All rights reserved.
+Retail 12.1 (`Interface 120100`), Classic Era 1.15.9 (`11509`) and WoW Forever
+(`16001`) — one manifest each. All rights reserved.

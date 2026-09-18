@@ -1,4 +1,4 @@
-## Interface: 11509
+## Interface: 16001
 ## Title: ResourceDing
 ## Notes: Plays a sound when a class finisher resource reaches maximum.
 ## IconTexture: Interface\AddOns\ResourceDing\icon
