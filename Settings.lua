@@ -130,7 +130,10 @@ function Addon.CreateSettingsPanel()
   panel.refresh = function()
     if not Addon.db then return end
     local resource, current, maximum = Addon.GetResourceState()
-    if resource and maximum > 0 then
+    if resource and maximum > 0 and current == nil then
+      -- The game is keeping the count to itself just now: Forever, in combat.
+      resourceText:SetText(string.format("Detected: %s (count hidden by the game)", resource.name))
+    elseif resource and maximum > 0 then
       resourceText:SetText(string.format("Detected: %s (%d / %d)", resource.name, current, maximum))
     elseif resource then
       resourceText:SetText("Detected: " .. resource.name .. " (inactive for this spec/form)")

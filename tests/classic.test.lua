@@ -17,8 +17,19 @@ local function stubClient(opts)
   registered, played = {}, {}
   for _, name in ipairs({ "Enum", "SOUNDKIT", "GetComboPoints", "MAX_COMBO_POINTS",
                           "WOW_PROJECT_ID", "WOW_PROJECT_MAINLINE", "ResourceDingDB",
-                          "C_AddOns", "GetAddOnMetadata" }) do
+                          "C_AddOns", "GetAddOnMetadata", "issecretvalue" }) do
     _G[name] = nil
+  end
+
+  -- A 12.x client's secret value: it answers issecretvalue, and any comparison
+  -- on it is an error, which is how the real one took the addon down.
+  local SECRET = {
+    __lt = function() error("attempt to compare a secret number value") end,
+    __le = function() error("attempt to compare a secret number value") end,
+  }
+  secret = function() return setmetatable({}, SECRET) end
+  if opts.forever then
+    issecretvalue = function(v) return type(v) == "table" and getmetatable(v) == SECRET end
   end
 
   -- Forever: the API is Classic Era's, the project id is Retail's, and the
@@ -151,6 +162,22 @@ addon = stubClient{ forever = true, maxPower = 0, combo = 5 }
 local fResource, fCurrent, fMaximum = addon.GetResourceState()
 assert(fResource and fCurrent == 5 and fMaximum == 5,
   "Forever reads combo points off the target, got " .. tostring(fCurrent) .. "/" .. tostring(fMaximum))
+
+-- In a fight the Forever client keeps that count secret. The addon must
+-- neither raise on it nor decide anything from it; when the plain number is
+-- back, the ding is the one it always was.
+addon = stubClient{ forever = true, maxPower = 0, combo = 0 }
+played = {}
+addon.CheckPower(false)
+comboNow = secret()
+local okSecret, errSecret = pcall(addon.CheckPower, false)
+assert(okSecret, "a secret count must not raise: " .. tostring(errSecret))
+assert(#played == 0, "and must not ding")
+local _, sCurrent = addon.GetResourceState()
+assert(sCurrent == nil, "a secret count reads as unknown, not as a number, got " .. tostring(sCurrent))
+comboNow = 5
+addon.CheckPower(false)
+assert(#played == 1, "the count coming back plain at full is the ding it always was, got " .. #played)
 
 -- Retail ---------------------------------------------------------------------
 

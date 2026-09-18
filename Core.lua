@@ -108,11 +108,27 @@ function Addon.GetResource()
   return class and Addon.RESOURCES[class] or nil
 end
 
+-- A number the client will let this addon use, 0 for no answer, or nil for a
+-- number it will not.
+--
+-- Clients from 12.0 on hand insecure code "secret" values for some combat
+-- data: a number a secure bar can show, but that a comparison or a sum in an
+-- addon raises on. WoW Forever is such a client, and its combo points live on
+-- the target, so GetComboPoints answers with one during a fight -- and a
+-- comparison on it inside an event handler took the whole addon down until
+-- the next reload (Core.lua:150, 2026-09-19). Asked before every use, so a
+-- secret reads as "unknown": not a full bar, and not an empty one either.
+local function known(value)
+  if type(issecretvalue) == "function" and issecretvalue(value) then return nil end
+  return type(value) == "number" and value or 0
+end
+Addon.KnownNumber = known
+
 function Addon.GetResourceState()
   local resource = Addon.GetResource()
   if not resource then return nil, 0, 0 end
-  local current = UnitPower("player", resource.power) or 0
-  local maximum = UnitPowerMax("player", resource.power) or 0
+  local current = known(UnitPower("player", resource.power))
+  local maximum = known(UnitPowerMax("player", resource.power)) or 0
   -- On the Classic client a rogue's or a cat druid's combo points belong to the
   -- target rather than to the player, and UnitPower reports none of them.
   -- GetComboPoints is the call that answers there. Retail is left alone: this
@@ -122,7 +138,9 @@ function Addon.GetResourceState()
   -- combo points off the target and reported a bar that spec does not have.
   if maximum <= 0 and resource.comboPoints and isClassic()
       and type(GetComboPoints) == "function" then
-    current = GetComboPoints("player", "target") or 0
+    -- The target's count, when the client gives it plainly. Forever keeps it
+    -- secret in combat, and then the answer is nil: unknown, not zero.
+    current = known(GetComboPoints("player", "target"))
     maximum = MAX_COMBO_POINTS or 5
   end
   return resource, current, maximum
@@ -146,6 +164,9 @@ function Addon.CheckPower(silent)
     Addon.wasFull = false
     return
   end
+  -- Unknown this time: the client kept the number to itself. That says
+  -- nothing about full or not, so the latch is left exactly as it was.
+  if current == nil then return end
 
   local isFull = current >= maximum
   if not silent and isFull and not Addon.wasFull and Addon.db.enabled then
