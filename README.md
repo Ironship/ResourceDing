@@ -24,9 +24,11 @@ that game at all, so `Core.lua` drops every entry but Rogue and Druid when it
 loads there — the settings never offer a resource the client cannot have.
 
 WoW Forever is that same game on the Retail client, which reports itself as
-Retail. The addon goes by the manifest the client loaded instead
-(`ResourceDing_Camelot.toc`, `Interface 16001`) and behaves as it does on
-Classic Era.
+Retail and loads the Retail manifest. The addon goes by the client's version
+instead (1.60.x) and behaves as it does on Classic Era. That game also keeps
+the combo point count secret from addons during a fight, so there the addon
+reads the game's own combo point display -- which points are lit -- rather
+than the number.
 
 ## Settings
 
@@ -43,5 +45,5 @@ settings.
 
 `/rding test`, `/rding on`, `/rding off` are also available.
 
-Retail 12.1 (`Interface 120100`), Classic Era 1.15.9 (`11509`) and WoW Forever
-(`16001`) — one manifest each. All rights reserved.
+Retail 12.1 and WoW Forever share one manifest (`Interface 120100, 16001`);
+Classic Era 1.15.9 has its own (`11509`). All rights reserved.

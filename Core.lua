@@ -9,28 +9,29 @@ end
 -- What differs is which of these resources the game actually has.
 --
 -- Forever is the awkward one. It is a Classic Era game -- vanilla content, the
--- Classic Era API, combo points on the target -- built on the Retail client,
--- and that client answers WOW_PROJECT_ID the way Retail does. Asked the usual
--- way, the addon would think it was on Retail, offer Chi and Holy Power to
--- classes that do not exist there, and register a specialisation event the
--- game may not have, which is an error at load. The one thing that says where
--- the addon actually is comes from the client's own choice of manifest: it
--- loads ResourceDing_Camelot.toc there, and that manifest says 16001.
-local FOREVER_INTERFACE = 16001
-
-local function manifestInterface()
-  local get = (type(C_AddOns) == "table" and C_AddOns.GetAddOnMetadata)
-    or GetAddOnMetadata
-  if type(get) ~= "function" then return nil end
-  -- Probed: on a client without the call, or with a manifest it cannot read,
-  -- the answer has to be "not Forever" rather than an error at load time.
-  local ok, value = pcall(get, addonName or "ResourceDing", "Interface")
-  if not ok then return nil end
-  return tonumber(value)
+-- Classic Era API -- built on the Retail client, and that client answers
+-- WOW_PROJECT_ID the way Retail does. Asked the usual way, the addon would
+-- think it was on Retail, offer Chi and Holy Power to classes that do not
+-- exist there, and register a specialisation event the game may not have,
+-- which is an error at load.
+--
+-- The one answer that client gives that is not Retail's is its version: Retail
+-- is 12.x, Classic Era 1.15.x, Forever 1.60.x. Not the manifest: measured on
+-- 2026-09-19 with /rding probe, the Forever client loads the _Mainline
+-- manifest, not a _Camelot one, so the manifest says what Retail's says. That
+-- is why ResourceDing_Mainline.toc lists 16001 beside 120100 -- the same
+-- convention AtlasLoot ships for that game -- and why the flavour is read
+-- from GetBuildInfo's version string, the first value it returns.
+local function clientIsForever()
+  if type(GetBuildInfo) ~= "function" then return false end
+  local ok, version = pcall(GetBuildInfo)
+  if not ok or type(version) ~= "string" then return false end
+  local major, minor = version:match("^(%d+)%.(%d+)")
+  return tonumber(major) == 1 and (tonumber(minor) or 0) >= 60
 end
 
 local function isClassic()
-  if manifestInterface() == FOREVER_INTERFACE then return true end
+  if clientIsForever() then return true end
   if type(WOW_PROJECT_ID) ~= "number" or type(WOW_PROJECT_MAINLINE) ~= "number" then
     return false
   end
@@ -124,6 +125,53 @@ local function known(value)
 end
 Addon.KnownNumber = known
 
+-- What the game's own combo point display is showing, for the client that
+-- keeps the number itself secret.
+--
+-- Forever draws combo points with the classic ComboFrame -- ComboPoint1 to
+-- ComboPoint5 -- by secure code that is allowed to read the count (/fstack on
+-- the Forever client, 2026-09-19: ComboFrame, ComboPoint5.Highlight,
+-- ComboFrame.xml:62). That code cannot keep its display secret: a widget's
+-- alpha is plain state. What it does is worth being exact about, from
+-- Blizzard's ComboFrame_Update: once one point is earned every point frame is
+-- shown, and an earned point differs from an unearned one only by its
+-- Highlight -- faded in over 0.4 s for a new point, set to alpha 0 when the
+-- point is gone; the whole frame hides at zero. So a point counts as lit when
+-- its Highlight is up, and the frame's own visibility only says "none".
+--
+-- Read as defensively as the number: should a client hand back a secret here
+-- too, the answer is nil -- unknown -- as before, never an error.
+local function plainValue(ok, value)
+  if not ok then return nil end
+  if type(issecretvalue) == "function" and issecretvalue(value) then return nil end
+  return value
+end
+
+local function displayedComboPoints()
+  local frame = _G.ComboFrame
+  if type(frame) ~= "table" or type(frame.IsShown) ~= "function" then return nil end
+  local shown = plainValue(pcall(frame.IsShown, frame))
+  if shown == nil then return nil end
+  if not shown then return 0 end
+  -- Every point frame there is, not the first five: with a maximum of five
+  -- Blizzard draws ComboPoint2 to ComboPoint6 and leaves ComboPoint1 hidden
+  -- (startComboPointIndex is 2 unless the maximum is 6 or 9), which is how a
+  -- count of the first five read four at a full bar on 2026-09-19. A hidden
+  -- frame is not lit whatever its alpha says.
+  local count = 0
+  for index = 1, 12 do
+    local point = _G["ComboPoint" .. index]
+    local highlight = type(point) == "table" and point.Highlight
+    if type(highlight) ~= "table" or type(highlight.GetAlpha) ~= "function" then break end
+    local visible = plainValue(pcall(point.IsShown, point))
+    local alpha = plainValue(pcall(highlight.GetAlpha, highlight))
+    if visible == nil or type(alpha) ~= "number" then return nil end
+    if visible and alpha > 0.5 then count = count + 1 end
+  end
+  return count
+end
+Addon.DisplayedComboPoints = displayedComboPoints
+
 function Addon.GetResourceState()
   local resource = Addon.GetResource()
   if not resource then return nil, 0, 0 end
@@ -142,6 +190,12 @@ function Addon.GetResourceState()
     -- secret in combat, and then the answer is nil: unknown, not zero.
     current = known(GetComboPoints("player", "target"))
     maximum = MAX_COMBO_POINTS or 5
+  end
+  -- Whichever call answered, a secret is a secret: on Forever UnitPower does
+  -- report a maximum of five and then withholds the count in combat. Where
+  -- the client draws the classic display, that says what the number would.
+  if current == nil and resource.comboPoints then
+    current = displayedComboPoints()
   end
   return resource, current, maximum
 end
@@ -210,6 +264,52 @@ local function listenFor(event, unit)
   return (pcall(method, events, event, unit))
 end
 
+-- When to look at the display.
+--
+-- The events this addon listens to are not promised on the client that needs
+-- the display: combo points on the target raise no UNIT_POWER event for the
+-- player there. So the display's own redraws are the trigger. ComboFrame
+-- handles PLAYER_TARGET_CHANGED and the power events itself, and a post-hook
+-- on its OnEvent runs after that redraw; a newly earned point's Highlight is
+-- still at alpha 0 then, fading in over 0.4 s, so the same look is taken
+-- again half a second later, when it is up. ComboPointShineFadeIn is what
+-- Blizzard calls when that fade finishes, and where the client has it as a
+-- global, it is the exact moment. All post-hooks: none of this taints the
+-- frame, and a client without the frame -- Classic Era draws its own -- has
+-- no hooks and reads the number as it always did.
+local HIGHLIGHT_SETTLED = 0.5
+
+local function lookAtDisplay()
+  Addon.looks = (Addon.looks or 0) + 1
+  if Addon.db then Addon.CheckPower(false) end
+end
+
+local function lookAgainLater()
+  if C_Timer and C_Timer.After then C_Timer.After(HIGHLIGHT_SETTLED, lookAtDisplay) end
+end
+
+Addon.hooks = {}
+if type(ComboFrame) == "table" and type(ComboFrame.HookScript) == "function" then
+  Addon.hooks.frame = (pcall(ComboFrame.HookScript, ComboFrame, "OnEvent", function()
+    lookAtDisplay()
+    lookAgainLater()
+  end))
+end
+if type(hooksecurefunc) == "function" then
+  if type(ComboFrame_Update) == "function" then
+    hooksecurefunc("ComboFrame_Update", function()
+      lookAtDisplay()
+      lookAgainLater()
+    end)
+    Addon.hooks.update = true
+  end
+  if type(ComboPointShineFadeIn) == "function" then
+    hooksecurefunc("ComboPointShineFadeIn", lookAtDisplay)
+    Addon.hooks.shine = true
+  end
+end
+Addon.LookAtDisplay = lookAtDisplay
+
 listenFor("ADDON_LOADED")
 listenFor("PLAYER_ENTERING_WORLD")
 listenFor("PLAYER_SPECIALIZATION_CHANGED")
@@ -245,6 +345,42 @@ SlashCmdList.RESOURCEDING = function(message)
   local command = strlower(strtrim(tostring(message or "")))
   if command == "test" then
     Addon.PlaySelectedSound()
+  elseif command == "probe" then
+    -- Everything the decision rests on, as the game hands it over right now,
+    -- for a client that keeps some of it secret. Typed in a fight, at the
+    -- count that should have dinged.
+    local function show(v)
+      if type(issecretvalue) == "function" and issecretvalue(v) then return "<secret>" end
+      return tostring(v)
+    end
+    local function call(object, method)
+      if type(object) ~= "table" or type(object[method]) ~= "function" then return "-" end
+      local ok, v = pcall(object[method], object)
+      return ok and show(v) or ("error: " .. tostring(v))
+    end
+    local resource = Addon.GetResource()
+    print("|cff66ccffResourceDing probe:|r resource " .. tostring(resource and resource.name)
+      .. "  classic=" .. tostring(isClassic()) .. "  combat=" .. show(UnitAffectingCombat("player")))
+    if resource then
+      print("  UnitPower " .. show(UnitPower("player", resource.power))
+        .. "  UnitPowerMax " .. show(UnitPowerMax("player", resource.power)))
+    end
+    if type(GetComboPoints) == "function" then
+      print("  GetComboPoints " .. show(GetComboPoints("player", "target"))
+        .. "  MAX_COMBO_POINTS " .. tostring(MAX_COMBO_POINTS))
+    end
+    print("  ComboFrame " .. type(_G.ComboFrame) .. " shown=" .. call(_G.ComboFrame, "IsShown")
+      .. "  ComboFrame_Update=" .. type(ComboFrame_Update) .. "  ShineFadeIn=" .. type(ComboPointShineFadeIn))
+    for i = 1, 5 do
+      local point = _G["ComboPoint" .. i]
+      print(string.format("  ComboPoint%d shown=%s  Highlight alpha=%s", i, call(point, "IsShown"),
+        call(type(point) == "table" and point.Highlight, "GetAlpha")))
+    end
+    local _, current, maximum = Addon.GetResourceState()
+    print("  displayed=" .. tostring(displayedComboPoints()) .. "  state " .. tostring(current) .. "/" .. tostring(maximum)
+      .. "  wasFull=" .. tostring(Addon.wasFull) .. "  looks=" .. tostring(Addon.looks or 0)
+      .. "  hooks frame=" .. tostring(Addon.hooks and Addon.hooks.frame) .. " update=" .. tostring(Addon.hooks and Addon.hooks.update)
+      .. " shine=" .. tostring(Addon.hooks and Addon.hooks.shine))
   elseif command == "on" then
     Addon.db.enabled = true
     Addon.ResetPowerState()
