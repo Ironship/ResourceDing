@@ -3,8 +3,9 @@
 ## Notes: Plays a sound when a class finisher resource reaches maximum.
 ## IconTexture: Interface\AddOns\ResourceDing\icon
 ## Author: Ironship
-## Version: 1.2.8
+## Version: 1.3.0
 ## SavedVariables: ResourceDingDB
 
 Core.lua
+Dots.lua
 Settings.lua

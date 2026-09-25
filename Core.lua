@@ -92,6 +92,9 @@ local defaults = {
   enabled = true,
   combatOnly = true,
   sound = "auction",
+  dots = true,     -- combo points as dots under the target's nameplate (Dots.lua)
+  dotSize = 14,
+  dotOffset = 2,   -- below the plate's health bar
 }
 Addon.defaults = defaults
 
@@ -250,6 +253,7 @@ end
 
 function Addon.ResetPowerState()
   Addon.CheckPower(true)
+  if Addon.RefreshDots then Addon.RefreshDots() end
   if Addon.settingsPanel and Addon.settingsPanel.refresh then Addon.settingsPanel.refresh() end
 end
 
@@ -282,6 +286,8 @@ local HIGHLIGHT_SETTLED = 0.5
 local function lookAtDisplay()
   Addon.looks = (Addon.looks or 0) + 1
   if Addon.db then Addon.CheckPower(false) end
+  -- the display has the count plainly now: the dots show it too
+  if Addon.RefreshDots then Addon.RefreshDots() end
 end
 
 local function lookAgainLater()
@@ -330,6 +336,7 @@ events:SetScript("OnEvent", function(_, event, arg1)
     initializeDatabase()
     if Addon.CreateSettingsPanel then Addon.CreateSettingsPanel() end
     Addon.ResetPowerState()
+    if Addon.StartDots then Addon.StartDots() end
   elseif not Addon.db then
     return
   elseif event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_SPECIALIZATION_CHANGED" or event == "UPDATE_SHAPESHIFT_FORM" or event == "UNIT_MAXPOWER" then

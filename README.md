@@ -7,6 +7,8 @@ A small World of Warcraft addon that plays one sound when your class finisher re
 
 It is useful when you are watching the fight instead of the resource bar: build five Combo Points, hear the cue, use a finisher. It only fires on the transition to full, so it does not repeat until you spend some resource and fill it again.
 
+It also shows the points as dots under the target's nameplate, filling as you build them. On WoW Forever the count is hidden from addons in combat; each dot is a small bar the game fills itself, so the dots work in combat too.
+
 ## Supported resources
 
 - Rogue and Feral Druid — Combo Points
@@ -38,6 +40,7 @@ Open **Esc → Options → AddOns → ResourceDing** or type `/rding`.
 - Combat-only mode (enabled by default)
 - Auction House, Ready Check, Quest Complete, Level Up, Bell, Coins, and Raid Warning sounds
 - Test sound button
+- Combo point dots under the target's nameplate, their size and distance below the health bar
 
 The panel follows the game: it shows the resource your current spec actually
 uses and updates when you change spec or form. **Defaults** restores the saved

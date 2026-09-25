@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // Classic players.
 export const source = [
   "Core.lua",
+  "Dots.lua",
   "Settings.lua",
   "ResourceDing_Mainline.toc",
   "ResourceDing_Vanilla.toc",

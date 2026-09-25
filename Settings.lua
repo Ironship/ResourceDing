@@ -10,6 +10,42 @@ local function checkbox(parent, name, label, y, getter, setter)
   return control
 end
 
+-- A slider with its label above and its value to the right, built from a plain Slider so it does
+-- not depend on a template every client has.
+local function slider(parent, label, y, min, max, getter, setter)
+  local text = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+  text:SetPoint("TOPLEFT", 16, y)
+  text:SetText(label)
+  local bar = CreateFrame("Slider", nil, parent)
+  bar:SetOrientation("HORIZONTAL")
+  bar:SetSize(200, 16)
+  bar:SetPoint("TOPLEFT", 18, y - 20)
+  bar:SetMinMaxValues(min, max)
+  bar:SetValueStep(1)
+  if bar.SetObeyStepOnDrag then bar:SetObeyStepOnDrag(true) end
+  bar:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+  local track = bar:CreateTexture(nil, "BACKGROUND")
+  track:SetColorTexture(0.2, 0.2, 0.22, 1)
+  track:SetPoint("LEFT")
+  track:SetPoint("RIGHT")
+  track:SetHeight(6)
+  local value = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+  value:SetPoint("LEFT", bar, "RIGHT", 10, 0)
+  bar:SetScript("OnValueChanged", function(_, v)
+    v = math.floor(v + 0.5)
+    value:SetText(tostring(v))
+    if bar.refreshing then return end
+    setter(v)
+  end)
+  bar.Refresh = function()
+    bar.refreshing = true
+    bar:SetValue(getter())
+    value:SetText(tostring(getter()))
+    bar.refreshing = false
+  end
+  return bar
+end
+
 local function soundEntries()
   local entries = {}
   for _, key in ipairs(Addon.SOUND_ORDER) do
@@ -127,6 +163,17 @@ function Addon.CreateSettingsPanel()
   supported:SetText("Supported: " .. table.concat(names, ", ")
     .. ". Classes without one of these stay silent.")
 
+  -- The dots under the target's nameplate (Dots.lua).
+  panel.dots = checkbox(panel, "ResourceDingDotsCheck", "Show the points as dots under the target's nameplate", -290,
+    function() return Addon.db.dots end,
+    function(value) Addon.db.dots = value; if Addon.RefreshDots then Addon.RefreshDots() end end)
+  panel.dotSize = slider(panel, "Dot size", -326, 8, 24,
+    function() return Addon.db.dotSize end,
+    function(value) Addon.db.dotSize = value; if Addon.RefreshDots then Addon.RefreshDots() end end)
+  panel.dotOffset = slider(panel, "Distance below the health bar", -370, 0, 30,
+    function() return Addon.db.dotOffset end,
+    function(value) Addon.db.dotOffset = value; if Addon.RefreshDots then Addon.RefreshDots() end end)
+
   panel.refresh = function()
     if not Addon.db then return end
     local resource, current, maximum = Addon.GetResourceState()
@@ -142,6 +189,9 @@ function Addon.CreateSettingsPanel()
     end
     panel.enabled:SetChecked(Addon.db.enabled)
     panel.combatOnly:SetChecked(Addon.db.combatOnly)
+    panel.dots:SetChecked(Addon.db.dots)
+    panel.dotSize.Refresh()
+    panel.dotOffset.Refresh()
     updateSoundText()
   end
 
