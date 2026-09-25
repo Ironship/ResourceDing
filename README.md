@@ -46,4 +46,4 @@ settings.
 `/rding test`, `/rding on`, `/rding off` are also available.
 
 Retail 12.1 and WoW Forever share one manifest (`Interface 120100, 16001`);
-Classic Era 1.15.9 has its own (`11509`). All rights reserved.
+Classic Era 1.15.9 has its own (`11509`). MIT licence.
