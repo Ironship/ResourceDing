@@ -46,7 +46,7 @@ local function stubClient(opts)
   C_AddOns = { GetAddOnMetadata = function(_, field)
     if field ~= "Interface" then return nil end
     if opts.classic then return "11509" end
-    return "120100, 16001"
+    return "120100, 120105, 16001"
   end }
   GetBuildInfo = function()
     if opts.forever then return "1.60.1", "69893", "2026-09-01", nil end
