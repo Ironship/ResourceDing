@@ -1,6 +1,6 @@
 # ResourceDing
 
-<img width="1024" height="1024" alt="icon_resourceding" src="https://github.com/user-attachments/assets/89aeb4d8-0cd7-4983-b622-79d4f91efd47" />
+<img width="1024" height="1024" alt="icon_resourceding" src="art/icon_resourceding.png" />
 
 
 A small World of Warcraft addon that plays one sound when your class finisher resource reaches maximum.
