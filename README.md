@@ -9,6 +9,8 @@ It is useful when you are watching the fight instead of the resource bar: build 
 
 It also shows the points as dots under the target's nameplate, filling as you build them. On WoW Forever the count is hidden from addons in combat; each dot is a small bar the game fills itself, so the dots work in combat too.
 
+For casters: a warlock on the Classic game (Classic Era, Forever) hears a Soul Shard come in and sees the shards as purple diamonds in the same place, and any caster can have a sound when mana climbs to a level: 80% for a warlock, who takes the rest with Life Tap, 100% for others. Mana is only read while the game shows it.
+
 ## Supported resources
 
 - Rogue and Feral Druid — Combo Points
@@ -41,6 +43,8 @@ Open **Esc → Options → AddOns → ResourceDing** or type `/rding`.
 - Auction House, Ready Check, Quest Complete, Level Up, Bell, Coins, and Raid Warning sounds
 - Test sound button
 - Combo point dots under the target's nameplate, their size and distance below the health bar
+- Soul Shards: the sound when one comes in, and the purple diamonds
+- Mana: the sound at a level you choose, with its own sound
 
 The panel follows the game: it shows the resource your current spec actually
 uses and updates when you change spec or form. **Defaults** restores the saved

@@ -8,4 +8,6 @@
 
 Core.lua
 Dots.lua
+Shards.lua
+Mana.lua
 Settings.lua

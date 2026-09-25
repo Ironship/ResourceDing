@@ -1,8 +1,8 @@
 local Addon = ResourceDing
 
-local function checkbox(parent, name, label, y, getter, setter)
+local function checkbox(parent, name, label, y, getter, setter, x)
   local control = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
-  control:SetPoint("TOPLEFT", 16, y)
+  control:SetPoint("TOPLEFT", x or 16, y)
   local text = control.Text or control.text or _G[name .. "Text"]
   if text then text:SetText(label) end
   control:SetChecked(getter())
@@ -12,16 +12,16 @@ end
 
 -- A slider with its label above and its value to the right, built from a plain Slider so it does
 -- not depend on a template every client has.
-local function slider(parent, label, y, min, max, getter, setter)
+local function slider(parent, label, y, min, max, getter, setter, x, step)
   local text = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-  text:SetPoint("TOPLEFT", 16, y)
+  text:SetPoint("TOPLEFT", x or 16, y)
   text:SetText(label)
   local bar = CreateFrame("Slider", nil, parent)
   bar:SetOrientation("HORIZONTAL")
   bar:SetSize(200, 16)
-  bar:SetPoint("TOPLEFT", 18, y - 20)
+  bar:SetPoint("TOPLEFT", (x or 16) + 2, y - 20)
   bar:SetMinMaxValues(min, max)
-  bar:SetValueStep(1)
+  bar:SetValueStep(step or 1)
   if bar.SetObeyStepOnDrag then bar:SetObeyStepOnDrag(true) end
   bar:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
   local track = bar:CreateTexture(nil, "BACKGROUND")
@@ -32,7 +32,7 @@ local function slider(parent, label, y, min, max, getter, setter)
   local value = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
   value:SetPoint("LEFT", bar, "RIGHT", 10, 0)
   bar:SetScript("OnValueChanged", function(_, v)
-    v = math.floor(v + 0.5)
+    v = math.floor(v / (step or 1) + 0.5) * (step or 1)
     value:SetText(tostring(v))
     if bar.refreshing then return end
     setter(v)
@@ -54,38 +54,39 @@ local function soundEntries()
   return entries
 end
 
-local function selectSound(key)
-  Addon.db.sound = key
-  Addon.PlaySelectedSound()
-end
-
-local function createDropdown(parent)
-  local modern = select(2, pcall(CreateFrame, "DropdownButton", "ResourceDingSoundDropdown", parent,
+-- A choice of sound for the setting setting (a key of Addon.SOUNDS); picking one plays it.
+local function createDropdown(parent, name, setting)
+  setting = setting or "sound"
+  local function selectSound(key)
+    Addon.db[setting] = key
+    Addon.PlaySoundKey(key)
+  end
+  local modern = select(2, pcall(CreateFrame, "DropdownButton", name, parent,
     "WowStyle1DropdownTemplate"))
   if type(modern) == "table" and modern.SetupMenu then
     modern:SetWidth(230)
     modern:SetupMenu(function(_, rootDescription)
       for _, entry in ipairs(soundEntries()) do
         rootDescription:CreateRadio(entry.name,
-          function() return Addon.db.sound == entry.key end,
+          function() return Addon.db[setting] == entry.key end,
           function() selectSound(entry.key) end)
       end
     end)
     return modern, function()
-      local sound = Addon.SOUNDS[Addon.db.sound] or Addon.SOUNDS.auction
+      local sound = Addon.SOUNDS[Addon.db[setting]] or Addon.SOUNDS.auction
       if modern.SetText then modern:SetText(sound.name) end
       if modern.GenerateMenu then modern:GenerateMenu() end
     end
   end
 
-  local legacy = CreateFrame("Frame", "ResourceDingSoundDropdownLegacy", parent, "UIDropDownMenuTemplate")
+  local legacy = CreateFrame("Frame", name .. "Legacy", parent, "UIDropDownMenuTemplate")
   UIDropDownMenu_SetWidth(legacy, 220)
   UIDropDownMenu_Initialize(legacy, function(_, level)
     for _, entry in ipairs(soundEntries()) do
       local info = UIDropDownMenu_CreateInfo()
       info.text = entry.name
       info.value = entry.key
-      info.checked = Addon.db.sound == entry.key
+      info.checked = Addon.db[setting] == entry.key
       info.func = function()
         selectSound(entry.key)
         UIDropDownMenu_SetText(legacy, Addon.SOUNDS[entry.key].name)
@@ -94,7 +95,7 @@ local function createDropdown(parent)
     end
   end)
   return legacy, function()
-    local sound = Addon.SOUNDS[Addon.db.sound] or Addon.SOUNDS.auction
+    local sound = Addon.SOUNDS[Addon.db[setting]] or Addon.SOUNDS.auction
     UIDropDownMenu_SetText(legacy, sound.name)
   end
 end
@@ -132,7 +133,7 @@ function Addon.CreateSettingsPanel()
   soundLabel:SetPoint("TOPLEFT", 16, -178)
   soundLabel:SetText("Sound")
 
-  local dropdown, updateSoundText = createDropdown(panel)
+  local dropdown, updateSoundText = createDropdown(panel, "ResourceDingSoundDropdown")
   dropdown:SetPoint("TOPLEFT", 8, -196)
   panel.dropdown = dropdown
   updateSoundText()
@@ -174,6 +175,31 @@ function Addon.CreateSettingsPanel()
     function() return Addon.db.dotOffset end,
     function(value) Addon.db.dotOffset = value; if Addon.RefreshDots then Addon.RefreshDots() end end)
 
+  -- Right-hand column: a warlock's Soul Shards (Shards.lua) and the mana level (Mana.lua).
+  local RIGHT = 370
+  local shardsHead = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+  shardsHead:SetPoint("TOPLEFT", RIGHT, -102)
+  shardsHead:SetText("Soul Shards (warlock)")
+  panel.shards = checkbox(panel, "ResourceDingShardsCheck", "Sound when a shard comes in", -120,
+    function() return Addon.db.shards end,
+    function(value) Addon.db.shards = value end, RIGHT)
+  panel.shardDiamonds = checkbox(panel, "ResourceDingShardDiamondsCheck", "Purple diamonds under the target", -148,
+    function() return Addon.db.shardDiamonds end,
+    function(value) Addon.db.shardDiamonds = value; if Addon.RefreshShards then Addon.RefreshShards() end end, RIGHT)
+
+  local manaHead = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+  manaHead:SetPoint("TOPLEFT", RIGHT, -196)
+  manaHead:SetText("Mana")
+  panel.mana = checkbox(panel, "ResourceDingManaCheck", "Sound when mana reaches the level", -214,
+    function() return Addon.db.mana end,
+    function(value) Addon.db.mana = value; if Addon.ResetMana then Addon.ResetMana() end end, RIGHT)
+  panel.manaPercent = slider(panel, "Mana level, %", -248, 50, 100,
+    function() return Addon.db.manaPercent end,
+    function(value) Addon.db.manaPercent = value; if Addon.ResetMana then Addon.ResetMana() end end, RIGHT, 5)
+  local manaDropdown, updateManaSoundText = createDropdown(panel, "ResourceDingManaSoundDropdown", "manaSound")
+  manaDropdown:SetPoint("TOPLEFT", RIGHT - 8, -300)
+  panel.manaDropdown = manaDropdown
+
   panel.refresh = function()
     if not Addon.db then return end
     local resource, current, maximum = Addon.GetResourceState()
@@ -192,6 +218,11 @@ function Addon.CreateSettingsPanel()
     panel.dots:SetChecked(Addon.db.dots)
     panel.dotSize.Refresh()
     panel.dotOffset.Refresh()
+    panel.shards:SetChecked(Addon.db.shards)
+    panel.shardDiamonds:SetChecked(Addon.db.shardDiamonds)
+    panel.mana:SetChecked(Addon.db.mana)
+    panel.manaPercent.Refresh()
+    updateManaSoundText()
     updateSoundText()
   end
 

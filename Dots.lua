@@ -147,6 +147,9 @@ function Addon.StartDots()
   Addon.RefreshDots()
 end
 
+Addon.starters = Addon.starters or {}
+table.insert(Addon.starters, Addon.StartDots)
+
 -- For the tests.
 Addon._dotsRow = function() return row end
 Addon._dots = dots

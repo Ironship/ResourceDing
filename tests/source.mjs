@@ -9,6 +9,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const source = [
   "Core.lua",
   "Dots.lua",
+  "Shards.lua",
+  "Mana.lua",
   "Settings.lua",
   "ResourceDing_Mainline.toc",
   "ResourceDing_Vanilla.toc",

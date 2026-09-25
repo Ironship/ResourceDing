@@ -95,6 +95,10 @@ local defaults = {
   dots = true,     -- combo points as dots under the target's nameplate (Dots.lua)
   dotSize = 14,
   dotOffset = 2,   -- below the plate's health bar
+  shards = true,         -- a warlock's Soul Shard coming in plays the sound (Shards.lua)
+  shardDiamonds = true,  -- and they show as purple diamonds under the target's nameplate
+  mana = true,           -- a sound when mana climbs to manaPercent (Mana.lua); manaPercent is
+  manaSound = "ready",   -- set per class when the settings load: 80 for a warlock, 100 for others
 }
 Addon.defaults = defaults
 
@@ -105,6 +109,8 @@ local function initializeDatabase()
   end
   if not Addon.SOUNDS[ResourceDingDB.sound] then ResourceDingDB.sound = defaults.sound end
   Addon.db = ResourceDingDB
+  if type(Addon.db.manaPercent) ~= "number" then Addon.db.manaPercent = Addon.DefaultManaPercent and Addon.DefaultManaPercent() or 100 end
+  if not Addon.SOUNDS[Addon.db.manaSound] then Addon.db.manaSound = Addon.SOUND_ORDER[1] end
 end
 
 function Addon.GetResource()
@@ -203,16 +209,20 @@ function Addon.GetResourceState()
   return resource, current, maximum
 end
 
-function Addon.PlaySelectedSound()
-  -- Falls through to whatever sound this client does have. The filter above
-  -- drops any SOUNDKIT entry the client is missing, and the default is not
-  -- exempt from that -- without a floor, a client without the auction sound
-  -- would error on every full bar instead of playing something else.
-  local choice = Addon.SOUNDS[Addon.db and Addon.db.sound or defaults.sound]
+-- Plays the sound of that key. Falls through to whatever sound this client does have. The filter
+-- above drops any SOUNDKIT entry the client is missing, and the default is not exempt from that --
+-- without a floor, a client without the auction sound would error on every full bar instead of
+-- playing something else.
+function Addon.PlaySoundKey(key)
+  local choice = Addon.SOUNDS[key or defaults.sound]
     or Addon.SOUNDS.auction
     or select(2, next(Addon.SOUNDS))
   if not choice or not choice.id then return false end
   return PlaySound(choice.id, "Master", true)
+end
+
+function Addon.PlaySelectedSound()
+  return Addon.PlaySoundKey(Addon.db and Addon.db.sound or defaults.sound)
 end
 
 function Addon.CheckPower(silent)
@@ -248,6 +258,8 @@ end
 
 function Addon.RestoreDefaults()
   for key, value in pairs(defaults) do Addon.db[key] = value end
+  Addon.db.manaPercent = Addon.DefaultManaPercent and Addon.DefaultManaPercent() or 100
+  if Addon.ResetMana then Addon.ResetMana() end
   Addon.ResetPowerState()
 end
 
@@ -336,7 +348,9 @@ events:SetScript("OnEvent", function(_, event, arg1)
     initializeDatabase()
     if Addon.CreateSettingsPanel then Addon.CreateSettingsPanel() end
     Addon.ResetPowerState()
-    if Addon.StartDots then Addon.StartDots() end
+    -- the dots, the shards and the mana level start once the settings are loaded (Dots.lua,
+    -- Shards.lua, Mana.lua): switched off, none of them takes an event
+    for _, start in ipairs(Addon.starters or {}) do start() end
   elseif not Addon.db then
     return
   elseif event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_SPECIALIZATION_CHANGED" or event == "UPDATE_SHAPESHIFT_FORM" or event == "UNIT_MAXPOWER" then
