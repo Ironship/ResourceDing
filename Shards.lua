@@ -100,7 +100,7 @@ function Addon.CheckShards()
   if n == nil then return end
   local before = count
   count = n
-  if before and n > before and Addon.db.shards and GetTime() >= quietUntil then
+  if before and n > before and Addon.db.enabled and Addon.db.shards and GetTime() >= quietUntil then
     Addon.PlaySoundKey(Addon.db.sound)
   end
   Addon.RefreshShards()

@@ -34,7 +34,8 @@ function Addon.CheckMana()
   if current == nil or maximum == nil then below = nil return end
   if maximum <= 0 then return end -- no mana: a warrior, a rogue
   local reached = current * 100 >= maximum * Addon.db.manaPercent
-  if below == true and reached and GetTime() >= quietUntil then Addon.PlaySoundKey(Addon.db.manaSound) end
+  -- /rding off silences this too; the reading is still taken, so nothing sounds late after /rding on
+  if below == true and reached and Addon.db.enabled and GetTime() >= quietUntil then Addon.PlaySoundKey(Addon.db.manaSound) end
   below = not reached
 end
 

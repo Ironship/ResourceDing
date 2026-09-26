@@ -147,6 +147,16 @@ addon.db.shards = false
 shards = 14
 fire("BAG_UPDATE_DELAYED")
 check(dings(5274) == 2, "the shard sound switched off: nothing")
+addon.db.shards = true
+SlashCmdList.RESOURCEDING("off")
+shards = 15
+fire("BAG_UPDATE_DELAYED")
+check(dings(5274) == 2, "/rding off: a shard coming in plays nothing")
+SlashCmdList.RESOURCEDING("on")
+check(dings(5274) == 2, "  nor late, at /rding on")
+shards = 16
+fire("BAG_UPDATE_DELAYED")
+check(dings(5274) == 3, "  and the next shard after /rding on does")
 
 addon = client({ class = "ROGUE" })
 check(addon._shardRow() == nil, "a rogue: the shards never start")
@@ -194,6 +204,21 @@ fire("UNIT_POWER_UPDATE", "player")
 mana = 100
 fire("UNIT_POWER_UPDATE", "player")
 check(dings(8960) == 3, "the mana sound switched off: nothing")
+addon.db.mana = true
+mana = 50
+fire("UNIT_POWER_UPDATE", "player")
+SlashCmdList.RESOURCEDING("off")
+mana = 100
+fire("UNIT_POWER_UPDATE", "player")
+check(dings(8960) == 3, "/rding off: mana reaching the level plays nothing")
+SlashCmdList.RESOURCEDING("on")
+fire("UNIT_POWER_UPDATE", "player")
+check(dings(8960) == 3, "  nor late, at /rding on")
+mana = 50
+fire("UNIT_POWER_UPDATE", "player")
+mana = 100
+fire("UNIT_POWER_UPDATE", "player")
+check(dings(8960) == 4, "  and the next climb after /rding on does")
 
 addon = client({ class = "MAGE", mana = 70 })
 check(addon.db.manaPercent == 100, "anyone else's level is 100%")
