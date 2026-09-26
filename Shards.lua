@@ -63,7 +63,7 @@ end
 
 function Addon.RefreshShards()
   if not (row and Addon.db) then return end
-  if not (Addon.db.shardDiamonds and forWarlock()) or not count or count <= 0 then return hide() end
+  if not (Addon.db.enabled and Addon.db.shardDiamonds and forWarlock()) or not count or count <= 0 then return hide() end
   local plate = targetPlate()
   if not plate then return hide() end
   local size = Addon.db.dotSize

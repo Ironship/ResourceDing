@@ -139,6 +139,12 @@ target = nil
 fire("PLAYER_TARGET_CHANGED")
 check(not row.shown and row.parent == UIParent, "no target: no diamonds")
 target = { hostile = true }
+fire("PLAYER_TARGET_CHANGED")
+local shownBefore = row.shown
+SlashCmdList.RESOURCEDING("off")
+check(shownBefore and not row.shown, "/rding off: the diamonds go")
+SlashCmdList.RESOURCEDING("on")
+check(row.shown, "/rding on: they come back")
 addon.db.shardDiamonds = false
 fire("PLAYER_TARGET_CHANGED")
 check(not row.shown, "diamonds switched off: none")

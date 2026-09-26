@@ -123,7 +123,7 @@ function Addon.CreateSettingsPanel()
 
   panel.enabled = checkbox(panel, "ResourceDingEnabledCheck", "Enable ResourceDing", -102,
     function() return Addon.db.enabled end,
-    function(value) Addon.db.enabled = value; Addon.ResetPowerState() end)
+    function(value) Addon.db.enabled = value; Addon.ResetPowerState(); Addon.RefreshMarks() end)
 
   panel.combatOnly = checkbox(panel, "ResourceDingCombatCheck", "Only play while in combat", -134,
     function() return Addon.db.combatOnly end,

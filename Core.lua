@@ -264,6 +264,12 @@ function Addon.CheckPower(silent)
   Addon.wasFull = isFull
 end
 
+-- The dots and diamonds follow the Enable switch as the sounds do.
+function Addon.RefreshMarks()
+  if Addon.RefreshDots then Addon.RefreshDots() end
+  if Addon.RefreshShards then Addon.RefreshShards() end
+end
+
 function Addon.RestoreDefaults()
   for key, value in pairs(defaults) do Addon.db[key] = value end
   Addon.db.manaPercent = Addon.DefaultManaPercent and Addon.DefaultManaPercent() or 100
@@ -414,10 +420,12 @@ SlashCmdList.RESOURCEDING = function(message)
   elseif command == "on" then
     Addon.db.enabled = true
     Addon.ResetPowerState()
+    Addon.RefreshMarks()
     print("|cff66ccffResourceDing:|r enabled")
   elseif command == "off" then
     Addon.db.enabled = false
     Addon.ResetPowerState()
+    Addon.RefreshMarks()
     print("|cff66ccffResourceDing:|r disabled")
   elseif Addon.OpenSettings then
     Addon.OpenSettings()

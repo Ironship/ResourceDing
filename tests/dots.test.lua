@@ -108,6 +108,10 @@ local ok, err = pcall(fire, "UNIT_POWER_FREQUENT", "player")
 check(ok, "a secret count raises nothing: " .. tostring(err))
 check(issecretvalue(dots[1].value) and issecretvalue(dots[5].value), "the secret goes to the bars as it is, for them to show")
 check(row.shown, "and the dots stay shown")
+SlashCmdList.RESOURCEDING("off")
+check(not row.shown, "/rding off: the dots go")
+SlashCmdList.RESOURCEDING("on")
+check(row.shown, "/rding on: they come back")
 
 points = 2
 target = { hostile = false }

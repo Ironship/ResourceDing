@@ -114,7 +114,7 @@ end
 
 function Addon.RefreshDots()
   if not (row and Addon.db) then return end
-  if not Addon.db.dots then return hide() end
+  if not (Addon.db.enabled and Addon.db.dots) then return hide() end -- /rding off hides them too
   local n, count = state()
   local plate = n and targetPlate()
   if not plate then return hide() end
