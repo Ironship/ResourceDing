@@ -162,7 +162,7 @@ function Addon.CreateSettingsPanel()
   end
   table.sort(names)
   supported:SetText("Supported: " .. table.concat(names, ", ")
-    .. ". Classes without one of these stay silent.")
+    .. ". Classes without one of these get no finisher sound.")
 
   -- The dots under the target's nameplate (Dots.lua).
   panel.dots = checkbox(panel, "ResourceDingDotsCheck", "Show the points as dots under the target's nameplate", -290,
@@ -215,7 +215,7 @@ function Addon.CreateSettingsPanel()
     elseif resource then
       resourceText:SetText("Detected: " .. resource.name .. " (inactive for this spec/form)")
     else
-      resourceText:SetText("No supported resource for this class")
+      resourceText:SetText("No finisher resource for this class")
     end
     panel.enabled:SetChecked(Addon.db.enabled)
     panel.combatOnly:SetChecked(Addon.db.combatOnly)

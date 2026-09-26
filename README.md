@@ -20,7 +20,7 @@ For casters: a warlock on the Classic game (Classic Era, Forever) hears a Soul S
 - Arcane Mage — Arcane Charges *(Retail)*
 - Evoker — Essence *(Retail)*
 
-Unsupported specs remain silent automatically.
+Unsupported specs get no finisher sound; the Soul Shard and mana sounds above are separate.
 
 On Classic Era only combo points exist. Chi, Holy Power, Arcane Charges and the
 Soul Shard bar all arrived with later expansions, and Monk and Evoker are not in

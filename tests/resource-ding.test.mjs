@@ -26,3 +26,9 @@ test("offers auction house and alternative sounds", () => {
   assert.match(source, /UI_QUEST_COMPLETE/);
   assert.match(source, /Test sound/);
 });
+
+test("does not tell casters they stay silent", () => {
+  // the mana and Soul Shard sounds are for classes without a finisher resource
+  assert.doesNotMatch(source, /stay silent/);
+  assert.doesNotMatch(source, /No supported resource/);
+});
