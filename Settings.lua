@@ -195,7 +195,11 @@ function Addon.CreateSettingsPanel()
     function(value) Addon.db.mana = value; if Addon.ResetMana then Addon.ResetMana() end end, RIGHT)
   panel.manaPercent = slider(panel, "Mana level, %", -248, 50, 100,
     function() return Addon.db.manaPercent end,
-    function(value) Addon.db.manaPercent = value; if Addon.ResetMana then Addon.ResetMana() end end, RIGHT, 5)
+    function(value)
+      Addon.db.manaPercent = value
+      Addon.db.manaLevels[Addon.manaClass] = value -- this class's level only
+      if Addon.ResetMana then Addon.ResetMana() end
+    end, RIGHT, 5)
   local manaDropdown, updateManaSoundText = createDropdown(panel, "ResourceDingManaSoundDropdown", "manaSound")
   manaDropdown:SetPoint("TOPLEFT", RIGHT - 8, -300)
   panel.manaDropdown = manaDropdown

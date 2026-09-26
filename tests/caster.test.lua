@@ -52,7 +52,9 @@ local function client(opts)
   now, shards, mana, manaMax = 1000, opts.shards or 3, opts.mana or 50, opts.manaMax or 100
   class = opts.class or "WARLOCK"
   target = { hostile = true }
-  for _, name in ipairs({ "WOW_PROJECT_ID", "WOW_PROJECT_MAINLINE", "ResourceDingDB", "ResourceDing" }) do _G[name] = nil end
+  for _, name in ipairs({ "WOW_PROJECT_ID", "WOW_PROJECT_MAINLINE", "ResourceDing" }) do _G[name] = nil end
+  -- the saved table is the account's: opts.account hands the one a character before this left
+  ResourceDingDB = opts.account
   if opts.retail then
     WOW_PROJECT_MAINLINE, WOW_PROJECT_ID = 1, 1
     GetBuildInfo = function() return "12.1.0", "1", "", 120100 end
@@ -245,6 +247,32 @@ addon = client({ class = "WARLOCK" })
 addon.db.manaPercent = 95
 addon.RestoreDefaults()
 check(addon.db.manaPercent == 80, "Defaults gives a warlock 80% back")
+
+-- One saved table for the whole account, as the client keeps it: every character reads the one
+-- the last left behind.
+addon = client({ class = "MAGE" })
+local account = ResourceDingDB
+addon = client({ class = "WARLOCK", account = account })
+check(addon.db.manaPercent == 80, "a mage logged in first: the warlock's level is still 80%")
+now = now + 5
+mana = 50
+fire("UNIT_POWER_UPDATE", "player")
+mana = 80
+fire("UNIT_POWER_UPDATE", "player")
+check(dings(8960) == 1, "  and the warlock hears it at 80%")
+addon = client({ class = "PRIEST", account = account })
+check(addon.db.manaPercent == 100, "a warlock logged in before: the priest's level is still 100%")
+local levels = account.manaLevels or {}
+levels.PRIEST = 90 -- what the priest's slider leaves behind
+addon.RestoreDefaults()
+check(levels.PRIEST == 100, "the priest's Defaults gives the priest 100% back")
+levels.PRIEST = 90
+addon = client({ class = "WARLOCK", account = account })
+check(addon.db.manaPercent == 80, "  and neither that nor the priest's own level moves the warlock's")
+addon = client({ class = "PRIEST", account = account })
+check(addon.db.manaPercent == 90, "the priest's own level is kept for the priest")
+addon = client({ class = "WARLOCK", account = { manaPercent = 100 } })
+check(addon.db.manaPercent == 80, "an account saved with one level for all: the warlock gets 80%")
 
 print(failures == 0 and "caster: ok" or ("caster: " .. failures .. " failed"))
 os.exit(failures == 0 and 0 or 1)

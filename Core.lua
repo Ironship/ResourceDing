@@ -109,7 +109,15 @@ local function initializeDatabase()
   end
   if not Addon.SOUNDS[ResourceDingDB.sound] then ResourceDingDB.sound = defaults.sound end
   Addon.db = ResourceDingDB
-  if type(Addon.db.manaPercent) ~= "number" then Addon.db.manaPercent = Addon.DefaultManaPercent and Addon.DefaultManaPercent() or 100 end
+  -- The saved table is shared by every character on the account, but the mana level is per class:
+  -- each class keeps its own entry, and manaPercent is this character's copy of it.
+  local _, class = UnitClass("player")
+  Addon.manaClass = class or "?"
+  if type(Addon.db.manaLevels) ~= "table" then Addon.db.manaLevels = {} end
+  if type(Addon.db.manaLevels[Addon.manaClass]) ~= "number" then
+    Addon.db.manaLevels[Addon.manaClass] = Addon.DefaultManaPercent and Addon.DefaultManaPercent() or 100
+  end
+  Addon.db.manaPercent = Addon.db.manaLevels[Addon.manaClass]
   if not Addon.SOUNDS[Addon.db.manaSound] then Addon.db.manaSound = Addon.SOUND_ORDER[1] end
 end
 
@@ -259,6 +267,7 @@ end
 function Addon.RestoreDefaults()
   for key, value in pairs(defaults) do Addon.db[key] = value end
   Addon.db.manaPercent = Addon.DefaultManaPercent and Addon.DefaultManaPercent() or 100
+  Addon.db.manaLevels[Addon.manaClass] = Addon.db.manaPercent
   if Addon.ResetMana then Addon.ResetMana() end
   Addon.ResetPowerState()
 end
