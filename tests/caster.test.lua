@@ -14,6 +14,9 @@ local SECRET = setmetatable({}, {
   __mul = function() error("did sums with a secret") end, __concat = function() error("concatenated a secret") end,
 })
 function issecretvalue(v) return rawequal(v, SECRET) end
+-- and type() of a secret answers its real type, as in the game: "number", not "table"
+local rawtype = type
+function type(v) if rawequal(v, SECRET) then return "number" end return rawtype(v) end
 
 local frames, played
 
