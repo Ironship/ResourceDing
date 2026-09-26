@@ -2,7 +2,8 @@
 --
 -- The combo point dots under the target's nameplate (Dots.lua), on a fake Forever client: the
 -- count in the open, the count secret in a fight, no target, a friendly one, a druid out of Cat
--- Form, the plate handed to another unit, the setting off.
+-- Form, the plate handed to another unit, the setting off; and on a fake Retail one, a spec without
+-- the bar.
 
 local failures = 0
 local function check(cond, label)
@@ -139,6 +140,29 @@ check(not row.shown, "switched off in the settings: no dots")
 addon.db.dots, addon.db.dotSize = true, 20
 fire("PLAYER_TARGET_CHANGED")
 check(row.shown and dots[1].width == 20, "a new size is laid out")
+
+-- Retail: a spec without its class's bar reports a maximum of 0 there
+print("-- Retail")
+frames = {}
+_G.ResourceDing = nil
+WOW_PROJECT_MAINLINE, WOW_PROJECT_ID = 1, 1
+function GetBuildInfo() return "12.1.0", "1", "", 120100 end
+class, points = "MAGE", 0
+local arcaneMax = 0
+function UnitPowerMax() return arcaneMax end
+ns = {}
+assert(loadfile("Core.lua"))("ResourceDing", ns)
+assert(loadfile("Dots.lua"))("ResourceDing", ns)
+addon = _G.ResourceDing
+events = nil
+for _, f in ipairs(frames) do if f.OnEvent and not events then events = f end end
+events.OnEvent(events, "ADDON_LOADED", "ResourceDing")
+row, dots = addon._dotsRow(), addon._dots
+fire("PLAYER_TARGET_CHANGED")
+check(not row.shown, "a Fire mage, Arcane Charges at a maximum of 0: no dots")
+arcaneMax, points = 4, 2
+fire("UNIT_POWER_FREQUENT", "player")
+check(row.shown and dots[4].shown and not (dots[5] and dots[5].shown) and full(2) and not full(3), "an Arcane mage, 2 of 4: four dots, two full")
 
 print(failures == 0 and "dots: ok" or ("dots: " .. failures .. " failed"))
 os.exit(failures == 0 and 0 or 1)

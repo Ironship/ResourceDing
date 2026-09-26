@@ -67,8 +67,9 @@ local function state()
     if count == nil and resource.comboPoints then count = ask(GetComboPoints, "player", "target") end
   end
   if count == nil then return nil end
-  local n = (type(maximum) == "number" and maximum > 0) and maximum or MAX_COMBO_POINTS or 5
-  return math.min(n, MAX_DOTS), count
+  -- a maximum of 0 is a spec or form without this bar (a Retail Fire mage has no Arcane Charges)
+  if type(maximum) ~= "number" or maximum <= 0 then return nil end
+  return math.min(maximum, MAX_DOTS), count
 end
 
 local function makeDot(i)
