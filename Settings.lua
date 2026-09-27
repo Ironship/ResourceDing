@@ -105,6 +105,9 @@ function Addon.CreateSettingsPanel()
   local panel = CreateFrame("Frame", "ResourceDingSettingsPanel", UIParent)
   panel.name = "ResourceDing"
   Addon.settingsPanel = panel
+  -- The right-hand column (Soul Shards, then mana) starts at this x, from y = -102 down. A line in
+  -- the left column below that must end before it, or the column's controls cover its words.
+  local RIGHT = 370
 
   local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
   title:SetPoint("TOPLEFT", 16, -16)
@@ -146,7 +149,7 @@ function Addon.CreateSettingsPanel()
 
   local supported = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
   supported:SetPoint("TOPLEFT", 16, -252)
-  supported:SetPoint("TOPRIGHT", -16, -252)
+  supported:SetPoint("TOPRIGHT", panel, "TOPLEFT", RIGHT - 16, -252) -- wraps short of the mana column
   supported:SetJustifyH("LEFT")
   supported:SetWordWrap(true)
   -- Built from the table the addon actually uses, which Core prunes on Classic
@@ -176,7 +179,6 @@ function Addon.CreateSettingsPanel()
     function(value) Addon.db.dotOffset = value; if Addon.RefreshDots then Addon.RefreshDots() end end)
 
   -- Right-hand column: a warlock's Soul Shards (Shards.lua) and the mana level (Mana.lua).
-  local RIGHT = 370
   local shardsHead = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
   shardsHead:SetPoint("TOPLEFT", RIGHT, -102)
   shardsHead:SetText("Soul Shards (warlock)")
