@@ -111,6 +111,10 @@ local function initializeDatabase()
   if type(ResourceDingDB.dotOffset) ~= "number" then ResourceDingDB.dotOffset = defaults.dotOffset
   elseif ResourceDingDB.dotOffset < -80 then ResourceDingDB.dotOffset = -80
   elseif ResourceDingDB.dotOffset > 30 then ResourceDingDB.dotOffset = 30 end
+  local dotSize = tonumber(ResourceDingDB.dotSize)
+  if dotSize ~= dotSize or not dotSize or dotSize < 8 then dotSize = 8
+  elseif dotSize > 24 then dotSize = 24 end
+  ResourceDingDB.dotSize = math.floor(dotSize + 0.5)
   Addon.db = ResourceDingDB
   -- The saved table is shared by every character on the account, but the mana level is per class:
   -- each class keeps its own entry, and manaPercent is this character's copy of it.
