@@ -94,7 +94,7 @@ local defaults = {
   sound = "auction",
   dots = true,     -- combo points as dots under the target's nameplate (Dots.lua)
   dotSize = 14,
-  dotOffset = 2,   -- below the plate's health bar
+  dotOffset = 2,   -- vertical offset from the health bar (negative = above)
   shards = true,         -- a warlock's Soul Shard coming in plays the sound (Shards.lua)
   shardDiamonds = true,  -- and they show as purple diamonds under the target's nameplate
   mana = true,           -- a sound when mana climbs to manaPercent (Mana.lua); manaPercent is
@@ -108,6 +108,9 @@ local function initializeDatabase()
     if ResourceDingDB[key] == nil then ResourceDingDB[key] = value end
   end
   if not Addon.SOUNDS[ResourceDingDB.sound] then ResourceDingDB.sound = defaults.sound end
+  if type(ResourceDingDB.dotOffset) ~= "number" then ResourceDingDB.dotOffset = defaults.dotOffset
+  elseif ResourceDingDB.dotOffset < -80 then ResourceDingDB.dotOffset = -80
+  elseif ResourceDingDB.dotOffset > 30 then ResourceDingDB.dotOffset = 30 end
   Addon.db = ResourceDingDB
   -- The saved table is shared by every character on the account, but the mana level is per class:
   -- each class keeps its own entry, and manaPercent is this character's copy of it.
