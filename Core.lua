@@ -95,6 +95,7 @@ local defaults = {
   dots = true,     -- combo points as dots under the target's nameplate (Dots.lua)
   dotSize = 14,
   dotOffset = 2,   -- vertical offset from the health bar (negative = above)
+  shardOffset = 2, -- the warlock diamonds' own offset: dots and diamonds move independently
   shards = true,         -- a warlock's Soul Shard coming in plays the sound (Shards.lua)
   shardDiamonds = true,  -- and they show as purple diamonds under the target's nameplate
   mana = true,           -- a sound when mana climbs to manaPercent (Mana.lua); manaPercent is
@@ -111,6 +112,9 @@ local function initializeDatabase()
   if type(ResourceDingDB.dotOffset) ~= "number" then ResourceDingDB.dotOffset = defaults.dotOffset
   elseif ResourceDingDB.dotOffset < -80 then ResourceDingDB.dotOffset = -80
   elseif ResourceDingDB.dotOffset > 30 then ResourceDingDB.dotOffset = 30 end
+  if type(ResourceDingDB.shardOffset) ~= "number" then ResourceDingDB.shardOffset = defaults.shardOffset
+  elseif ResourceDingDB.shardOffset < -80 then ResourceDingDB.shardOffset = -80
+  elseif ResourceDingDB.shardOffset > 30 then ResourceDingDB.shardOffset = 30 end
   local dotSize = tonumber(ResourceDingDB.dotSize)
   if dotSize ~= dotSize or not dotSize or dotSize < 8 then dotSize = 8
   elseif dotSize > 24 then dotSize = 24 end

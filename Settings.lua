@@ -178,12 +178,23 @@ function Addon.CreateSettingsPanel()
       if Addon.RefreshDots then Addon.RefreshDots() end
       if Addon.RefreshShards then Addon.RefreshShards() end -- the diamonds size from dotSize too
     end)
-  panel.dotOffset = slider(panel, "Offset from the health bar (- = above)", -370, -80, 30,
+  panel.dotOffset = slider(panel, "Dot offset from the health bar (- = above)", -370, -80, 30,
     function() return Addon.db.dotOffset end,
     function(value)
+      value = tonumber(value) or 2
+      if value ~= value then value = 2 end
+      if value < -80 then value = -80 elseif value > 30 then value = 30 end
       Addon.db.dotOffset = value
       if Addon.RefreshDots then Addon.RefreshDots() end
-      if Addon.RefreshShards then Addon.RefreshShards() end -- and anchor from dotOffset
+    end)
+  panel.shardOffset = slider(panel, "Shard offset from the health bar (- = above)", -414, -80, 30,
+    function() return Addon.db.shardOffset end,
+    function(value)
+      value = tonumber(value) or 2
+      if value ~= value then value = 2 end
+      if value < -80 then value = -80 elseif value > 30 then value = 30 end
+      Addon.db.shardOffset = value
+      if Addon.RefreshShards then Addon.RefreshShards() end
     end)
 
   -- Right-hand column: a warlock's Soul Shards (Shards.lua) and the mana level (Mana.lua).
